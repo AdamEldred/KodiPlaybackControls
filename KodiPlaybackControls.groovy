@@ -34,7 +34,7 @@ preferences {
 	section("Lights to Control") {
 		input "switches", "capability.switchLevel", required: true, title: "Which Switches?", multiple: true
 	}
-    section("Level to set Lights to (-1 for last known level):") {
+    section("Level to set Lights to (101 for last known level):") {
 		input "playLevel", "number", required: true, title: "On Playback"
         input "pauseLevel", "number", required: true, title: "On Pause"
         input "resumeLevel", "number", required: true, title: "On Resume"
@@ -80,10 +80,10 @@ def updated() {}
 void play() {
 	//Code to execute when playback started in KODI
     log.debug "Play command started"
-    if (playLevel == -1){
+    if (playLevel == 101){
     	log.debug "Restoring Last Known Light Levels"
     	restoreLast(switches)
-    }else{
+    }else if (playLevel <= 100){
     	log.debug "Setting lights to ${playLevel} %"
     	switches.setLevel(playLevel)
     }
@@ -91,10 +91,10 @@ void play() {
 void stop() {
 	//Code to execute when playback stopped in KODI
     log.debug "Stop command started"
-    if (stopLevel == -1){
+    if (stopLevel == 101){
     	log.debug "Restoring Last Known Light Levels"
         restoreLast(switches)
-    }else{
+    }else if (stopLevel <= 100){
     	log.debug "Setting lights to ${stopLevel} %"
         switches.setLevel(stopLevel)
     }
@@ -102,10 +102,10 @@ void stop() {
 void pause() {
 	//Code to execute when playback paused in KODI
     log.debug "Pause command started"
-    if (pauseLevel == -1){
+    if (pauseLevel == 101){
     	log.debug "Restoring Last Known Light Levels"
         restoreLast(switches)
-    }else{
+    }else if (pauseLevel <= 100){
     	log.debug "Setting lights to ${pauseLevel} %"
         switches.setLevel(pauseLevel)
     }
@@ -113,10 +113,10 @@ void pause() {
 void resume() {
 	//Code to execute when playback resumed in KODI
     log.debug "Resume command started"
-    if (resumeLevel == -1){
+    if (resumeLevel == 101){
     	log.debug "Restoring Last Known Light Levels"
         restoreLast(switches)
-    }else{
+    }else if (resumeLevel <= 100){
     	log.debug "Setting lights to ${resumeLevel} %"
         switches.setLevel(resumeLevel)
     }
@@ -170,3 +170,4 @@ private void DeviceLogs(devices){
     }
 
 }
+
