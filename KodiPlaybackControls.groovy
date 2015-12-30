@@ -12,9 +12,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  To Use:  Publish Application "For Me", open App properties and copy OAuth Client ID and secret under oAuth tab.
- *  Create command URLs:  https://graph.api.smartthings.com/api/smartapps/installations/<CLIENTID>/<COMMAND>?access_token=<SECRET>
- *  Use xbmccallbacks2 plugin to point to individual command URLs for the following commands: play, stop, pause, resume
+ *  To Use:  Publish Application "For Me", use xbmccallbacks2 plugin to point to individual command URLs for the following commands: play, stop, pause, resume
  *  Install Smartapp with desired dimmer switches and light levels.  Edit code below for each command as desired.
  *
  */
@@ -31,15 +29,30 @@ definition(
 
 
 preferences {
-	section("Lights to Control") {
-		input "switches", "capability.switchLevel", required: true, title: "Which Switches?", multiple: true
-	}
-    section("Level to set Lights to (101 for last known level):") {
-		input "playLevel", "number", required: true, title: "On Playback"
-        input "pauseLevel", "number", required: true, title: "On Pause"
-        input "resumeLevel", "number", required: true, title: "On Resume"
-        input "stopLevel", "number", required: true, title: "On Stop"
-	}
+	page(name: "pgSettings", title: "Settings",
+         nextPage: "pgURL", uninstall: false) {
+        section("Lights to Control") {
+            input "switches", "capability.switchLevel", required: true, title: "Which Switches?", multiple: true
+        }
+        section("Level to set Lights to (101 for last known level):") {
+            input "playLevel", "number", required: true, title: "On Playback", defaultValue:0
+            input "pauseLevel", "number", required: true, title: "On Pause", defaultValue:40
+            input "resumeLevel", "number", required: true, title: "On Resume", defaultValue:0
+            input "stopLevel", "number", required: true, title: "On Stop", defaultValue:101
+        }
+        section("Other"){
+        	label(name: "instanceLabel",
+              title: "Label for this Instance",
+              required: true,
+              multiple: false)
+        	icon(title: "Icon for this Instance",
+             required: false)
+            mode(title: "Run only in these modes")
+        }
+    }
+    page(name: "pgURL", title: "Instructions",
+         install: true, uninstall: true)
+    
 }
 
 mappings {
@@ -70,6 +83,29 @@ mappings {
         ]
 	} 
 }
+
+
+//PAGES
+///////////////////////////////
+def pgURL(){
+	if (!state.accessToken) {
+    	createAccessToken() 
+    }
+    def url = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
+	dynamicPage(name: "pgURL") {
+    	section("Instructions") {
+        	paragraph "Please install xbmc.callbacks2 plugin for Kodi."
+            paragraph "In the callbacks2 settings assign the following URLs for corresponding events:"
+            input "playvalue", "text", title:"Web address to copy for play command:", defaultValue:"${url}play"
+    		input "stopvalue", "text", title:"Web address to copy for stop command:", defaultValue:"${url}stop"
+            input "pausevalue", "text", title:"Web address to copy for pause command:", defaultValue:"${url}pause"
+    		input "resumevalue", "text", title:"Web address to copy for resume command:", defaultValue:"${url}resume"
+        }
+    }
+}
+
+//END PAGES
+/////////////////////////
 
 def installed() {}
 
@@ -170,4 +206,3 @@ private void DeviceLogs(devices){
     }
 
 }
-
