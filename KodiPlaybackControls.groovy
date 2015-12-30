@@ -12,6 +12,11 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  To Use:  Publish Application "For Me", open App properties and copy OAuth Client ID and secret under oAuth tab.
+ *  Create command URLs:  https://graph.api.smartthings.com/api/smartapps/installations/<CLIENTID>/<COMMAND>?access_token=<SECRET>
+ *  Use xbmccallbacks2 plugin to point to individual command URLs for the following commands: play, stop, pause, resume
+ *  Install Smartapp with desired dimmer switches and light levels.  Edit code below for each command as desired.
+ *
  */
 definition(
     name: "KODI Playback Controls",
