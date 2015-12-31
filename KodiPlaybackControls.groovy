@@ -45,7 +45,7 @@ preferences {
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
         	icon(title: "Icon for this Instance", required: false)
-            //mode(title: "Run only in these modes")
+            	mode(title: "Run only in these modes")
         }
     }
     
