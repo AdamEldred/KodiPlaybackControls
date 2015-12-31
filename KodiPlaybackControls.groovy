@@ -1,5 +1,5 @@
 /**
- *  KODI Playback Controls
+ *  KODI Callback Endpoint
  *
  *  Copyright 2015 Thildemar
  *
@@ -13,14 +13,14 @@
  *  for the specific language governing permissions and limitations under the License.
  *
  *  To Use:  Publish Application "For Me", use xbmccallbacks2 plugin to point to individual command URLs for the following commands: play, stop, pause, resume
- *  Install Smartapp with desired dimmer switches and light levels.  Edit code below for each command as desired.
+ *  Install Smartapp with desired switches and light levels.  Edit code below for each command as desired.
  *
  */
 definition(
-    name: "KODI Playback Controls",
+    name: "KODI Callback Endpoint",
     namespace: "Thildemar",
     author: "Thildemar",
-    description: "Provide simple endpoint template for KODI (XBMC) callbacks2 plugin.  Plan to execute automation code within SmartApp instead of relying on 3rd party scripts to trigger multiple endpoints.",
+    description: "Provides simple lighting control endpoint for KODI (XBMC) callbacks2 plugin.",
     category: "Convenience",
     iconUrl: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment1-icn.png",
     iconX2Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment1-icn@2x.png",
@@ -29,29 +29,27 @@ definition(
 
 
 preferences {
+	
+
 	page(name: "pgSettings", title: "Settings",
-         nextPage: "pgURL", uninstall: false) {
+          nextPage: "pgURL", uninstall: true) {
         section("Lights to Control") {
-            input "switches", "capability.switchLevel", required: true, title: "Which Switches?", multiple: true
+            input "switches", "capability.switch", required: true, title: "Which Switches?", multiple: true
         }
         section("Level to set Lights to (101 for last known level):") {
-            input "playLevel", "number", required: true, title: "On Playback", defaultValue:0
-            input "pauseLevel", "number", required: true, title: "On Pause", defaultValue:40
-            input "resumeLevel", "number", required: true, title: "On Resume", defaultValue:0
-            input "stopLevel", "number", required: true, title: "On Stop", defaultValue:101
+            input "playLevel", "number", required: true, title: "On Playback", defaultValue:"0"
+            input "pauseLevel", "number", required: true, title: "On Pause", defaultValue:"40"
+            input "resumeLevel", "number", required: true, title: "On Resume", defaultValue:"0"
+            input "stopLevel", "number", required: true, title: "On Stop", defaultValue:"101"
         }
-        section("Other"){
-        	label(name: "instanceLabel",
-              title: "Label for this Instance",
-              required: true,
-              multiple: false)
-        	icon(title: "Icon for this Instance",
-             required: false)
-            mode(title: "Run only in these modes")
+        section("Instance Preferences"){
+        	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
+        	icon(title: "Icon for this Instance", required: false)
+            //mode(title: "Run only in these modes")
         }
     }
-    page(name: "pgURL", title: "Instructions",
-         install: true, uninstall: true)
+    
+    page(name: "pgURL", title: "Instructions", install: true, uninstall: true)
     
 }
 
@@ -94,12 +92,12 @@ def pgURL(){
     def url = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
 	dynamicPage(name: "pgURL") {
     	section("Instructions") {
-        	paragraph "Please install xbmc.callbacks2 plugin for Kodi."
-            paragraph "In the callbacks2 settings assign the following URLs for corresponding events:"
+        	paragraph "This app is designed to work with the xbmc.callbacks2 plugin for Kodi. Please download and install callbacks2 and in its settings assign the following URLs for corresponding events:"
             input "playvalue", "text", title:"Web address to copy for play command:", defaultValue:"${url}play"
     		input "stopvalue", "text", title:"Web address to copy for stop command:", defaultValue:"${url}stop"
             input "pausevalue", "text", title:"Web address to copy for pause command:", defaultValue:"${url}pause"
     		input "resumevalue", "text", title:"Web address to copy for resume command:", defaultValue:"${url}resume"
+            paragraph "If you have more than one Kodi install, you may install an additional copy of this app for unique addresses specific to each room."
         }
     }
 }
@@ -111,6 +109,12 @@ def installed() {}
 
 def updated() {}
 
+def uninstalled(){
+	//Clean up Access Token
+	revokeAccessToken()
+	state.accessToken = null 
+}
+
 
 
 void play() {
@@ -121,7 +125,7 @@ void play() {
     	restoreLast(switches)
     }else if (playLevel <= 100){
     	log.debug "Setting lights to ${playLevel} %"
-    	switches.setLevel(playLevel)
+    	SetLight(switches,playLevel)
     }
 }
 void stop() {
@@ -132,7 +136,7 @@ void stop() {
         restoreLast(switches)
     }else if (stopLevel <= 100){
     	log.debug "Setting lights to ${stopLevel} %"
-        switches.setLevel(stopLevel)
+        SetLight(switches,stopLevel)
     }
 }
 void pause() {
@@ -143,7 +147,7 @@ void pause() {
         restoreLast(switches)
     }else if (pauseLevel <= 100){
     	log.debug "Setting lights to ${pauseLevel} %"
-        switches.setLevel(pauseLevel)
+        SetLight(switches,pauseLevel)
     }
 }
 void resume() {
@@ -154,7 +158,7 @@ void resume() {
         restoreLast(switches)
     }else if (resumeLevel <= 100){
     	log.debug "Setting lights to ${resumeLevel} %"
-        switches.setLevel(resumeLevel)
+        SetLight(switches,resumeLevel)
     }
 }
 void logs() {
@@ -166,38 +170,68 @@ def deviceHandler(evt) {}
 
 private void restoreLast(switchList){
 	//This will look for the last external (not from this app) setting applied to each switch and set the switch back to that
-
 	//Look at each switch passed
 	switchList.each{sw ->
-    	//Get events for this switch in the last day
-    	def swEvents = sw.eventsSince(new Date() - 1, [max: 1000])
-		log.debug "Found ${swEvents?.size() ?: 0} Switch events for ${sw.displayName}"
-        //Find Last Event Where switch was turned on/off/level, but not changed by this app
-        //Oddly not all events properyly contain the "installedSmartAppId", particularly ones that actual contain useful values
-        //In order to filter out events created by this app we have to find the set of evennts for the app control and the actual action
-        //the first 8 char of the event ID seem to be unique, but the rest seems to be the same for any grouping of events, so match on that (substring)
-		def lastState = swEvents.find {
-        (it.name == "level" || it.name == "switch") && (swEvents.find{it2 -> it2.id.toString().substring(8) == it.id.toString().substring(8) && it2.installedSmartAppId == app.id} == null)
+    	def lastState = LastState(sw) //get Last State
+        if (lastState){   //As long as we found one, set it    
+            SetLight(sw,lastState)
+    	}else{ //Otherwise assume it was off
+        	SetLight(sw, "off") 
         }
-        //If we found one restore to that
-        if (lastState){       
-            log.debug "Last External Event - Event ID: ${lastState.id} | AppID: ${lastState.installedSmartAppId} | Description: ${lastState.descriptionText} | Name: ${lastState.displayName} (${lastState.name}) | App: ${lastState.installedSmartApp} | Value: ${lastState.stringValue} | Source: ${lastState.source} | Desc: ${lastState.description}"
-            if (lastState.stringValue == "on"){
-            	sw.setLevel(100)	
-            }else if (lastState.name == "level"){
-                try {
-                    sw.setLevel(lastState.integerValue)
-                }catch (e) { //This should not fire as level events should have an integer value
-                    log.debug "Trying to get the integerValue for ${lastState.name} threw an exception: $e"
-                }
-            }else{ //If no event or last action was "off" assume we wanted that light off
-            	sw.setLevel(0)
+    }
+}
+
+private def LastState(device){
+	//Get events for this device in the last day
+	def devEvents = device.eventsSince(new Date() - 1, [max: 1000])
+    //Find Last Event Where switch was turned on/off/level, but not changed by this app
+    //Oddly not all events properly contain the "installedSmartAppId", particularly ones that actual contain useful values
+    //In order to filter out events created by this app we have to find the set of events for the app control and the actual action
+    //the first 8 char of the event ID seem to be unique, but the rest seems to be the same for any grouping of events, so match on that (substring)
+    def last = devEvents.find {
+        (it.name == "level" || it.name == "switch") && (devEvents.find{it2 -> it2.id.toString().substring(8) == it.id.toString().substring(8) && it2.installedSmartAppId == app.id} == null)
+        }
+    //If we found one return the stringValue
+    if (last){
+    	//log.debug "Last External Event - Event ID: ${last.id} | AppID: ${last.installedSmartAppId} | Description: ${last.descriptionText} | Name: ${last.displayName} (${last.name}) | App: ${last.installedSmartApp} | Value: ${last.stringValue} | Source: ${last.source} | Desc: ${last.description}"
+    	return last.stringValue
+    }else{
+    	return null
+    }
+}
+
+private void SetLight(switches,value){
+	//Set value for one or more lights, translates dimmer values to on/off for basic switches
+
+	//Fix any odd values that could be passed
+	if(value.toString().isInteger()){
+    	if(value.toInteger() < 0){value = 0}
+        if(value.toInteger() > 100){value = 100}
+    }else if(value.toString() != "on" && value.toString() != "off"){
+    	return //ABORT! Lights do not support commands like "Hamster"
+    }
+	switches.each{sw ->
+    	log.debug "${sw.name} |  ${value}"
+    	if(value.toString() == "off" || value.toString() == "0"){ //0 and off are the same here, turn the light off
+        	sw.off()
+        }else if(value.toString() == "on"  || value.toString() == "100"){ //As stored light level is not really predictable, on should mean 100% for now
+        	if(sw.hasCommand("setLevel")){ //setlevel for dimmers, on for basic
+            	sw.setLevel(100)
+            }else{
+            	sw.on()
             }
-    	}	
+        }else{ //Otherwise we should have a % value here after cleanup above, use ir or just turn a basic switch on
+        	if(sw.hasCommand("setLevel")){//setlevel for dimmers, on for basic
+            	sw.setLevel(value.toInteger())
+            }else{
+            	sw.on()
+            }
+        }
     }
 }
 
 private void DeviceLogs(devices){
+	//Output event logs from last day for all devices passed
 	devices.each{ device ->
     	def devEvents = device.eventsSince(new Date() - 1, [max: 1000])
     	devEvents.each{ev ->
