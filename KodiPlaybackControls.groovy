@@ -45,7 +45,7 @@ preferences {
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
         	icon(title: "Icon for this Instance", required: false)
-            	mode(title: "Run only in these modes")
+            //mode(title: "Run only in these modes")
         }
     }
     
@@ -187,9 +187,10 @@ private def LastState(device){
     //Find Last Event Where switch was turned on/off/level, but not changed by this app
     //Oddly not all events properly contain the "installedSmartAppId", particularly ones that actual contain useful values
     //In order to filter out events created by this app we have to find the set of events for the app control and the actual action
-    //the first 8 char of the event ID seem to be unique, but the rest seems to be the same for any grouping of events, so match on that (substring)
+    //the first 8 char of the event ID seem to be unique much of the time, but the rest seems to be the same for any grouping of events, so match on that (substring)
+    //In case the substring fails we will also check for events with similar timestamp (within 8 sec)
     def last = devEvents.find {
-        (it.name == "level" || it.name == "switch") && (devEvents.find{it2 -> it2.id.toString().substring(8) == it.id.toString().substring(8) && it2.installedSmartAppId == app.id} == null)
+        (it.name == "level" || it.name == "switch") && (devEvents.find{it2 -> (it2.id.toString().substring(8) == it.id.toString().substring(8) || Math.sqrt((it2.date.getTime() - it.date.getTime())**2) < 8000 ) && it2.installedSmartAppId == app.id} == null)
         }
     //If we found one return the stringValue
     if (last){
@@ -235,7 +236,7 @@ private void DeviceLogs(devices){
 	devices.each{ device ->
     	def devEvents = device.eventsSince(new Date() - 1, [max: 1000])
     	devEvents.each{ev ->
-        	log.debug "Event Date: ${ev.date} | ID: ${ev.id} | AppID: ${ev.installedSmartAppId} | Description: ${ev.descriptionText} | Name: ${ev.displayName} (${ev.name}) | App: ${ev.installedSmartApp} | Value: ${ev.stringValue} | Source: ${ev.source} | Desc: ${ev.description}"
+        	log.debug "Event Date: ${ev.date} | ${ev.date.getTime()} | ID: ${ev.id} | AppID: ${ev.installedSmartAppId} | Description: ${ev.descriptionText} | Name: ${ev.displayName} (${ev.name}) | App: ${ev.installedSmartApp} | Value: ${ev.stringValue} | Source: ${ev.source} | Desc: ${ev.description}"
         }
     }
 
