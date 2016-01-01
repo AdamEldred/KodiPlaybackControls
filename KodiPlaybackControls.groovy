@@ -190,12 +190,21 @@ private def LastState(device){
     //the first 8 char of the event ID seem to be unique much of the time, but the rest seems to be the same for any grouping of events, so match on that (substring)
     //In case the substring fails we will also check for events with similar timestamp (within 8 sec)
     def last = devEvents.find {
-        (it.name == "level" || it.name == "switch") && (devEvents.find{it2 -> (it2.id.toString().substring(8) == it.id.toString().substring(8) || Math.sqrt((it2.date.getTime() - it.date.getTime())**2) < 8000 ) && it2.installedSmartAppId == app.id} == null)
+        (it.name == "level" || it.name == "switch") && (devEvents.find{it2 -> it2.installedSmartAppId == app.id && (it2.id.toString().substring(8) == it.id.toString().substring(8) || Math.sqrt((it2.date.getTime() - it.date.getTime())**2) < 6000 )} == null)
         }
     //If we found one return the stringValue
     if (last){
-    	//log.debug "Last External Event - Event ID: ${last.id} | AppID: ${last.installedSmartAppId} | Description: ${last.descriptionText} | Name: ${last.displayName} (${last.name}) | App: ${last.installedSmartApp} | Value: ${last.stringValue} | Source: ${last.source} | Desc: ${last.description}"
-    	return last.stringValue
+    	log.debug "Last External Event - Date: ${last.date} | Event ID: ${last.id} | AppID: ${last.installedSmartAppId} | Description: ${last.descriptionText} | Name: ${last.displayName} (${last.name}) | App: ${last.installedSmartApp} | Value: ${last.stringValue} | Source: ${last.source} | Desc: ${last.description}"
+    	//if event is "on" find last externally set level as it could be in an older event
+        if(last.stringValue == "on"){
+            def lastLevel = devEvents.find {
+            (it.name == "level") && (devEvents.find{it2 -> it2.installedSmartAppId == app.id && (it2.id.toString().substring(8) == it.id.toString().substring(8) || Math.sqrt((it2.date.getTime() - it.date.getTime())**2) < 6000 )} == null)
+            }
+        	if(lastLevel){
+            	return lastLevel.stringValue 
+            }
+        }
+		return last.stringValue
     }else{
     	return null
     }
