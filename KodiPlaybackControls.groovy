@@ -29,8 +29,6 @@ definition(
 
 
 preferences {
-	
-
 	page(name: "pgSettings", title: "Settings",
           nextPage: "pgURL", uninstall: true) {
         section("Lights to Control") {
@@ -45,7 +43,8 @@ preferences {
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
         	icon(title: "Icon for this Instance", required: false)
-            	mode(title: "Run only in these modes")
+            input "onlyModes", "mode", title: "Only run in these modes", multiple: true
+            input "neverModes", "mode", title: "Never run in these modes", multiple: true
         }
     }
     
@@ -75,28 +74,22 @@ mappings {
             GET: "resume"
         ]
 	}  
-    path("/logs") {
-        action: [
-            GET: "logs"
-        ]
-	} 
 }
-
 
 //PAGES
 ///////////////////////////////
 def pgURL(){
-	if (!state.accessToken) {
-    	createAccessToken() 
+    if (!state.accessToken) {
+        createAccessToken() 
     }
     def url = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
 	dynamicPage(name: "pgURL") {
     	section("Instructions") {
-        	paragraph "This app is designed to work with the xbmc.callbacks2 plugin for Kodi. Please download and install callbacks2 and in its settings assign the following URLs for corresponding events:"
+            paragraph "This app is designed to work with the xbmc.callbacks2 plugin for Kodi. Please download and install callbacks2 and in its settings assign the following URLs for corresponding events:"
             input "playvalue", "text", title:"Web address to copy for play command:", defaultValue:"${url}play"
-    		input "stopvalue", "text", title:"Web address to copy for stop command:", defaultValue:"${url}stop"
+            input "stopvalue", "text", title:"Web address to copy for stop command:", defaultValue:"${url}stop"
             input "pausevalue", "text", title:"Web address to copy for pause command:", defaultValue:"${url}pause"
-    		input "resumevalue", "text", title:"Web address to copy for resume command:", defaultValue:"${url}resume"
+            input "resumevalue", "text", title:"Web address to copy for resume command:", defaultValue:"${url}resume"
             paragraph "If you have more than one Kodi install, you may install an additional copy of this app for unique addresses specific to each room."
         }
     }
@@ -120,53 +113,39 @@ def uninstalled(){
 void play() {
 	//Code to execute when playback started in KODI
     log.debug "Play command started"
-    if (playLevel == 101){
-    	log.debug "Restoring Last Known Light Levels"
-    	restoreLast(switches)
-    }else if (playLevel <= 100){
-    	log.debug "Setting lights to ${playLevel} %"
-    	SetLight(switches,playLevel)
-    }
+    RunCommand(playLevel)
 }
 void stop() {
 	//Code to execute when playback stopped in KODI
     log.debug "Stop command started"
-    if (stopLevel == 101){
-    	log.debug "Restoring Last Known Light Levels"
-        restoreLast(switches)
-    }else if (stopLevel <= 100){
-    	log.debug "Setting lights to ${stopLevel} %"
-        SetLight(switches,stopLevel)
-    }
+    RunCommand(stopLevel)
 }
 void pause() {
 	//Code to execute when playback paused in KODI
     log.debug "Pause command started"
-    if (pauseLevel == 101){
-    	log.debug "Restoring Last Known Light Levels"
-        restoreLast(switches)
-    }else if (pauseLevel <= 100){
-    	log.debug "Setting lights to ${pauseLevel} %"
-        SetLight(switches,pauseLevel)
-    }
+    RunCommand(pauseLevel)
 }
 void resume() {
 	//Code to execute when playback resumed in KODI
     log.debug "Resume command started"
-    if (resumeLevel == 101){
-    	log.debug "Restoring Last Known Light Levels"
-        restoreLast(switches)
-    }else if (resumeLevel <= 100){
-    	log.debug "Setting lights to ${resumeLevel} %"
-        SetLight(switches,resumeLevel)
-    }
-}
-void logs() {
-	//Debug
-    DeviceLogs(switches)
+    RunCommand(resumeLevel)
 }
 
 def deviceHandler(evt) {}
+
+private void RunCommand(level){
+	//Check to see if current mode is in white/black list before we do anything
+	if((!onlyModes || location.currentMode in onlyModes) && !(location.currentMode in neverModes)){
+    	//Mode is good, go ahead with commands
+    	if (level == 101){
+            log.debug "Restoring Last Known Light Levels"
+            restoreLast(switches)
+        }else if (level <= 100){
+            log.debug "Setting lights to ${level} %"
+            SetLight(switches,level)
+    	}
+    }
+}
 
 private void restoreLast(switchList){
 	//This will look for the last external (not from this app) setting applied to each switch and set the switch back to that
@@ -197,6 +176,7 @@ private def LastState(device){
     	log.debug "Last External Event - Date: ${last.date} | Event ID: ${last.id} | AppID: ${last.installedSmartAppId} | Description: ${last.descriptionText} | Name: ${last.displayName} (${last.name}) | App: ${last.installedSmartApp} | Value: ${last.stringValue} | Source: ${last.source} | Desc: ${last.description}"
     	//if event is "on" find last externally set level as it could be in an older event
         if(last.stringValue == "on"){
+        	devEvents = device.eventsSince(new Date() - 7, [max: 1000]) //Last level set command could have been awhile back, look in last 7 days
             def lastLevel = devEvents.find {
             (it.name == "level") && (devEvents.find{it2 -> it2.installedSmartAppId == app.id && (it2.id.toString().substring(8) == it.id.toString().substring(8) || Math.sqrt((it2.date.getTime() - it.date.getTime())**2) < 6000 )} == null)
             }
@@ -238,15 +218,4 @@ private void SetLight(switches,value){
             }
         }
     }
-}
-
-private void DeviceLogs(devices){
-	//Output event logs from last day for all devices passed
-	devices.each{ device ->
-    	def devEvents = device.eventsSince(new Date() - 1, [max: 1000])
-    	devEvents.each{ev ->
-        	log.debug "Event Date: ${ev.date} | ${ev.date.getTime()} | ID: ${ev.id} | AppID: ${ev.installedSmartAppId} | Description: ${ev.descriptionText} | Name: ${ev.displayName} (${ev.name}) | App: ${ev.installedSmartApp} | Value: ${ev.stringValue} | Source: ${ev.source} | Desc: ${ev.description}"
-        }
-    }
-
 }
