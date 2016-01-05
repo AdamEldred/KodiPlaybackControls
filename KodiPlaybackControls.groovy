@@ -43,8 +43,8 @@ preferences {
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
         	icon(title: "Icon for this Instance", required: false)
-            input "onlyModes", "mode", title: "Only run in these modes", multiple: true
-            input "neverModes", "mode", title: "Never run in these modes", multiple: true
+            input "onlyModes", "mode", title: "Only run in these modes", required: false, multiple: true
+            input "neverModes", "mode", title: "Never run in these modes", required: false, multiple: true
         }
     }
     
