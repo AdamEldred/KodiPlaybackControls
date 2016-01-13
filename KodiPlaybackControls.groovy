@@ -1,7 +1,7 @@
 /**
  *  KODI Callback Endpoint
  *
- *  Copyright 2015 Thildemar v0.011
+ *  Copyright 2015 Thildemar v0.012
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -27,10 +27,14 @@ definition(
     iconX3Url: "http://cdn.device-icons.smartthings.com/Entertainment/entertainment1-icn@2x.png",
     oauth: true)
 
-
 preferences {
-	page(name: "pgSettings", title: "Settings",
-          nextPage: "pgURL", uninstall: true) {
+	page(name: "pgSettings")
+    page(name: "pgURL") 
+}
+//PAGES
+///////////////////////////////
+def pgSettings() {
+    dynamicPage(name: "pgSettings", title: "Settings", uninstall: true) {
         section("Lights to Control") {
             input "switches", "capability.switch", required: true, title: "Which Switches?", multiple: true
         }
@@ -42,15 +46,34 @@ preferences {
         }
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
-        	icon(title: "Icon for this Instance", required: false)
+        	//icon(title: "Icon for this Instance", required: false)
             input "onlyModes", "mode", title: "Only run in these modes", required: false, multiple: true
             input "neverModes", "mode", title: "Never run in these modes", required: false, multiple: true
         }
+        section("View URLs"){
+        	href( "pgURL", description: "Click here to view URLs", title: "")
+        }
     }
-    
-    page(name: "pgURL", title: "Instructions", install: true, uninstall: true)
-    
 }
+
+def pgURL(){
+    dynamicPage(name: "pgURL", title: "URLs", uninstall: false, install: false) {
+    	if (!state.accessToken) {
+        	createAccessToken() 
+    	}
+    	def url = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
+    	section("Instructions") {
+            paragraph "This app is designed to work with the xbmc.callbacks2 plugin for Kodi. Please download and install callbacks2 and in its settings assign the following URLs for corresponding events:"
+            input "playvalue", "text", title:"Web address to copy for play command:", required: false, defaultValue:"${url}play"
+            input "stopvalue", "text", title:"Web address to copy for stop command:", required: false, defaultValue:"${url}stop"
+            input "pausevalue", "text", title:"Web address to copy for pause command:", required: false, defaultValue:"${url}pause"
+            input "resumevalue", "text", title:"Web address to copy for resume command:", required: false, defaultValue:"${url}resume"
+            paragraph "If you have more than one Kodi install, you may install an additional copy of this app for unique addresses specific to each room."
+        }
+    }
+}
+//END PAGES
+/////////////////////////
 
 mappings {
 
@@ -75,28 +98,6 @@ mappings {
         ]
 	}  
 }
-
-//PAGES
-///////////////////////////////
-def pgURL(){
-    if (!state.accessToken) {
-        createAccessToken() 
-    }
-    def url = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
-	dynamicPage(name: "pgURL") {
-    	section("Instructions") {
-            paragraph "This app is designed to work with the xbmc.callbacks2 plugin for Kodi. Please download and install callbacks2 and in its settings assign the following URLs for corresponding events:"
-            input "playvalue", "text", title:"Web address to copy for play command:", defaultValue:"${url}play"
-            input "stopvalue", "text", title:"Web address to copy for stop command:", defaultValue:"${url}stop"
-            input "pausevalue", "text", title:"Web address to copy for pause command:", defaultValue:"${url}pause"
-            input "resumevalue", "text", title:"Web address to copy for resume command:", defaultValue:"${url}resume"
-            paragraph "If you have more than one Kodi install, you may install an additional copy of this app for unique addresses specific to each room."
-        }
-    }
-}
-
-//END PAGES
-/////////////////////////
 
 def installed() {}
 
