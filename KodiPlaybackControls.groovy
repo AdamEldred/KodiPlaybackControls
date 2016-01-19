@@ -38,7 +38,7 @@ preferences {
 def pgSettings() {
     dynamicPage(name: "pgSettings", title: "Light Control Groups", install: true, uninstall: true) {
         section() {
-            app(name: "childApps", appName: "KODI Callback Endpoint Light Group", namespace: "Thildemar", title: "New Light Control Group", multiple: true)
+            app(name: "childApps", appName: "KODI Playback Controls TEST Child", namespace: "Thildemar", title: "New Light Control Group", multiple: true)
         }
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
@@ -65,6 +65,8 @@ def pgURL(){
             input "stopvalue", "text", title:"Web address to copy for stop command:", required: false, defaultValue:"${url}stop"
             input "pausevalue", "text", title:"Web address to copy for pause command:", required: false, defaultValue:"${url}pause"
             input "resumevalue", "text", title:"Web address to copy for resume command:", required: false, defaultValue:"${url}resume"
+            input "custom1value", "text", title:"Web address to copy for custom 1 command:", required: false, defaultValue:"${url}custom1"
+            input "custom2value", "text", title:"Web address to copy for custom 2 command:", required: false, defaultValue:"${url}custom2"
             paragraph "If you have more than one Kodi install, you may install an additional copy of this app for unique addresses specific to each room."
         }
     }
@@ -88,11 +90,21 @@ mappings {
 			GET: "pause"
 		]
 	}
-    	path("/resume") {
-        	action: [
-        		GET: "resume"
-        	]
+    path("/resume") {
+        action: [
+            GET: "resume"
+        ]
 	}  
+    path("/custom1") {
+		action: [
+			GET: "pause"
+		]
+	}
+    path("/custom2") {
+        action: [
+            GET: "resume"
+        ]
+	} 
 }
 def installed() {}
 
@@ -125,6 +137,16 @@ void resume() {
 	//Code to execute when playback resumed in KODI
     log.debug "Master Resume command started"
     RunCommand(resume)
+}
+void custom1() {
+	//Code to execute when playback paused in KODI
+    log.debug "Master custom1 command started"
+    RunCommand(custom)
+}
+void custom2() {
+	//Code to execute when playback resumed in KODI
+    log.debug "Master custom2 command started"
+    RunCommand(custom2)
 }
 
 
