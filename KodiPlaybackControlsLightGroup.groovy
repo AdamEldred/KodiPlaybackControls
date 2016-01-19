@@ -28,82 +28,82 @@ definition(
 
 
 preferences {
-	page(name: "pgSettings", title: "Group Settings", install:true, uninstall: true){
-    	section("Group Name"){
-        	label(name: "instanceLabel", title: "Label for this Group", required: true, multiple: false)
+	page(name: "pgSettings", install:true, uninstall: true){
+    	section(){
+        	label(name: "instanceLabel", title: "Label for this Group", required: false, multiple: false)
         }
         section("Lights to Control") {
             input "switches", "capability.switch", required: true, title: "Which Switches?", multiple: true
         }
         section("Level to set Lights to (101 for last known level):") {
             input "playLevel", "number", required: true, title: "On Playback", defaultValue:"0"
-            input "playFade", "number", required: true, title: "Playback Fade Time", defaultValue:"3"
             input "pauseLevel", "number", required: true, title: "On Pause", defaultValue:"40"
-            input "pauseFade", "number", required: true, title: "Pause Fade Time", defaultValue:"3"
             input "resumeLevel", "number", required: true, title: "On Resume", defaultValue:"0"
-            input "resumeFade", "number", required: true, title: "Resume Fade Time", defaultValue:"3"
             input "stopLevel", "number", required: true, title: "On Stop", defaultValue:"101"
-            input "stopFade", "number", required: true, title: "Stop Fade Time", defaultValue:"3"
+            input "customLevel", "number", required: true, title: "On Custom Event 1", defaultValue:"0"
+            input "custom2Level", "number", required: true, title: "On Custom Event 2", defaultValue:"0"
         }
     }
 }
-
-
-
-
 
 def installed() {}
 
 def updated() {}
 
-def uninstalled(){
-
-}
-
-
+def uninstalled(){}
 
 void play() {
 	//Code to execute when playback started in KODI
     log.debug "Play command started"
-    RunCommand(playLevel, playFade)
+    RunCommand(playLevel)
 }
 void stop() {
 	//Code to execute when playback stopped in KODI
     log.debug "Stop command started"
-    RunCommand(stopLevel, stopFade)
+    RunCommand(stopLevel)
 }
 void pause() {
 	//Code to execute when playback paused in KODI
     log.debug "Pause command started"
-    RunCommand(pauseLevel, pauseFade)
+    RunCommand(pauseLevel)
 }
 void resume() {
 	//Code to execute when playback resumed in KODI
     log.debug "Resume command started"
-    RunCommand(resumeLevel, resumeFade)
+    RunCommand(resumeLevel)
+}
+void custom1() {
+	//Code to execute when playback paused in KODI
+    log.debug "Custom command started"
+    RunCommand(customLevel)
+}
+void custom2() {
+	//Code to execute when playback resumed in KODI
+    log.debug "Custom 2 command started"
+    RunCommand(custom2Level)
 }
 
 def deviceHandler(evt) {}
 
-private void RunCommand(level, fadeTime){
+private void RunCommand(level){
     if (level == 101){
         log.debug "Restoring Last Known Light Levels"
-        restoreLast(switches, fadeTime)
+        restoreLast(switches)
     }else if (level <= 100){
         log.debug "Setting lights to ${level} %"
-        SetLight(switches,level,fadeTime)
+        SetLight(switches,level)
     }
 }
 
-private void restoreLast(switchList, fadeTime){
+private void restoreLast(switchList){
 	//This will look for the last external (not from this app) setting applied to each switch and set the switch back to that
 	//Look at each switch passed
 	switchList.each{sw ->
     	def lastState = LastState(sw) //get Last State
         if (lastState){   //As long as we found one, set it    
-            SetLight(sw,lastState, fadeTime)
+            SetLight(sw,lastState)
     	}else{ //Otherwise assume it was off
-        	SetLight(sw, "off", fadeTime) 
+        	SetLight(sw, "off") 
         }
     }
 }
@@ -138,7 +138,7 @@ private def LastState(device){
     }
 }
 
-private void SetLight(switches,value,fadeTime){
+private void SetLight(switches,value){
 	//Set value for one or more lights, translates dimmer values to on/off for basic switches
 
 	//Fix any odd values that could be passed
@@ -152,19 +152,20 @@ private void SetLight(switches,value,fadeTime){
     	log.debug "${sw.name} |  ${value}"
     	if(value.toString() == "off" || value.toString() == "0"){ //0 and off are the same here, turn the light off
         	if(sw.hasCommand("setLevel")){ //setlevel for dimmers, on for basic
-            	sw.setLevel(0, fadeTime.toInteger())
+            	sw.setLevel(0)
             }else{
             	sw.off()
             }
         }else if(value.toString() == "on"  || value.toString() == "100"){ //As stored light level is not really predictable, on should mean 100% for now
         	if(sw.hasCommand("setLevel")){ //setlevel for dimmers, on for basic
-            	sw.setLevel(100, fadeTime.toInteger())
+            	sw.setLevel(100)
             }else{
             	sw.on()
             }
         }else{ //Otherwise we should have a % value here after cleanup above, use ir or just turn a basic switch on
         	if(sw.hasCommand("setLevel")){//setlevel for dimmers, on for basic
-            	sw.setLevel(value.toInteger(), fadeTime.toInteger())
+            	log.debug "Fadetime ${fadeTime.toInteger()}"
+            	sw.setLevel(value.toInteger())
             }else{
             	sw.on()
             }
