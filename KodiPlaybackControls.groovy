@@ -141,7 +141,7 @@ void resume() {
 void custom1() {
 	//Code to execute when playback paused in KODI
     log.debug "Master custom1 command started"
-    RunCommand(custom)
+    RunCommand(custom1)
 }
 void custom2() {
 	//Code to execute when playback resumed in KODI
