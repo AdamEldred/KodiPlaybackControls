@@ -1,7 +1,7 @@
 /**
  *  KODI Callback Endpoint
  *
- *  Copyright 2015 Thildemar v0.020
+ *  Copyright 2015 Thildemar v0.022
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -97,12 +97,12 @@ mappings {
 	}  
     path("/custom1") {
 		action: [
-			GET: "pause"
+			GET: "custom1"
 		]
 	}
     path("/custom2") {
         action: [
-            GET: "resume"
+            GET: "custom2"
         ]
 	} 
 }
