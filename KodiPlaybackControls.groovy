@@ -38,7 +38,7 @@ preferences {
 def pgSettings() {
     dynamicPage(name: "pgSettings", title: "Light Control Groups", install: true, uninstall: true) {
         section() {
-            app(name: "childApps", appName: "KODI Playback Controls TEST Child", namespace: "Thildemar", title: "New Light Control Group", multiple: true)
+            app(name: "childApps", appName: "KODI Callback Endpoint Light Group", namespace: "Thildemar", title: "New Light Control Group", multiple: true)
         }
         section("Instance Preferences"){
         	label(name: "instanceLabel", title: "Label for this Instance", required: false, multiple: false)
