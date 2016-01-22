@@ -1,7 +1,7 @@
 /**
  *  KODI Callback Endpoint Light Group
  *
- *  Copyright 2016 Thildemar v0.020
+ *  Copyright 2016 Thildemar v0.022
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -164,7 +164,6 @@ private void SetLight(switches,value){
             }
         }else{ //Otherwise we should have a % value here after cleanup above, use ir or just turn a basic switch on
         	if(sw.hasCommand("setLevel")){//setlevel for dimmers, on for basic
-            	log.debug "Fadetime ${fadeTime.toInteger()}"
             	sw.setLevel(value.toInteger())
             }else{
             	sw.on()
