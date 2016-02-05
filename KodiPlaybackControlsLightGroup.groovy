@@ -1,7 +1,7 @@
 /**
  *  KODI Callback Endpoint Light Group
  *
- *  Copyright 2016 Thildemar v0.022
+ *  Copyright 2016 Thildemar v0.023
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -122,17 +122,28 @@ private def LastState(device){
     //If we found one return the stringValue
     if (last){
     	log.debug "Last External Event - Date: ${last.date} | Event ID: ${last.id} | AppID: ${last.installedSmartAppId} | Description: ${last.descriptionText} | Name: ${last.displayName} (${last.name}) | App: ${last.installedSmartApp} | Value: ${last.stringValue} | Source: ${last.source} | Desc: ${last.description}"
-    	//if event is "on" find last externally set level as it could be in an older event
+    	log.debug "Current Level ${device.currentLevel}"
+        //if event is "on" find last externally set level as it could be in an older event
         if(last.stringValue == "on"){
         	devEvents = device.eventsSince(new Date() - 7, [max: 1000]) //Last level set command could have been awhile back, look in last 7 days
             def lastLevel = devEvents.find {
             (it.name == "level") && (devEvents.find{it2 -> it2.installedSmartAppId == app.id && (it2.id.toString().substring(8) == it.id.toString().substring(8) || Math.sqrt((it2.date.getTime() - it.date.getTime())**2) < 6000 )} == null)
             }
         	if(lastLevel){
-            	return lastLevel.stringValue 
+                if(device.currentLevel == lastLevel.integerValue){
+                    log.debug "Current level is the same as last event, using 'on' command to support fade up"
+                    return "on"
+                }else{
+                    return lastLevel.stringValue 
+                }
             }
         }
-		return last.stringValue
+        if(device.currentLevel == last.integerValue){
+            log.debug "Current level is the same as last event, using 'on' command to support fade up"
+            return "on"
+        }else{
+			return last.stringValue
+        }
     }else{
     	return null
     }
@@ -150,19 +161,17 @@ private void SetLight(switches,value){
     }
 	switches.each{sw ->
     	log.debug "${sw.name} |  ${value}"
-    	if(value.toString() == "off" || value.toString() == "0"){ //0 and off are the same here, turn the light off
-        	if(sw.hasCommand("setLevel")){ //setlevel for dimmers, on for basic
-            	sw.setLevel(0)
-            }else{
-            	sw.off()
-            }
-        }else if(value.toString() == "on"  || value.toString() == "100"){ //As stored light level is not really predictable, on should mean 100% for now
+    	if(value.toString() == "off" || value.toString() == "0"){ //0 and off are the same here, turn the light off   	
+            sw.off()
+        }else if(value.toString() == "100"){
         	if(sw.hasCommand("setLevel")){ //setlevel for dimmers, on for basic
             	sw.setLevel(100)
             }else{
             	sw.on()
             }
-        }else{ //Otherwise we should have a % value here after cleanup above, use ir or just turn a basic switch on
+        }else if(value.toString() == "on"  ){
+            sw.on()
+        }else{ //Otherwise we should have a % value here after cleanup above, use it or just turn a basic switch on
         	if(sw.hasCommand("setLevel")){//setlevel for dimmers, on for basic
             	sw.setLevel(value.toInteger())
             }else{
