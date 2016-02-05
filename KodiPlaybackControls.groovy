@@ -60,7 +60,7 @@ def pgURL(){
     	}
     	def url = apiServerUrl("/api/token/${state.accessToken}/smartapps/installations/${app.id}/")
     	section("Instructions") {
-            paragraph "This app is designed to work with the xbmc.callbacks2 plugin for Kodi. Please download and install callbacks2 and in its settings assign the following URLs for corresponding events:"
+            paragraph "This app is designed to work with the Kodi Callbacks plugin for Kodi. Please download and install Kodi Callbacks and in its settings assign the following URLs for corresponding events:"
             input "playvalue", "text", title:"Web address to copy for play command:", required: false, defaultValue:"${url}play"
             input "stopvalue", "text", title:"Web address to copy for stop command:", required: false, defaultValue:"${url}stop"
             input "pausevalue", "text", title:"Web address to copy for pause command:", required: false, defaultValue:"${url}pause"
